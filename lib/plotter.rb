@@ -94,69 +94,74 @@ module Silicium
         @image.save(filename, :interlace => true)
       end
     end
+    class Plot
 
-    @CENTER_X = (get :width) / 2
-    @CENTER_Y = (get :height) / 2
-    @MUL = (get :height)  / 15
+      @img = nil
+      @center_x = nil
+      @center_y = nil
+      @mul = nil
 
-    def fn(x)
-      #Math::asin(Math::sqrt(x))
-      Math::cos(0.5*x)
-      #x**2
-      #14/x
-    end
-
-    def draw_axes
-      (-(get :width)..(get :width)).each do |i|
-        draw_point(i, 0, 1, 'white')
+      def initialize(width=1280, height=720, bg_color = ChunkyPNG::Color::TRANSPARENT)
+        @img = ChunkyPNG::Image.new(width, height, bg_color)
+        @center_x = @img.width / 2
+        @center_y = @img.height / 2
+        @mul = @img.height  / 15
       end
-      (-(get :height)..(get :height)).each do |i|
-        draw_point(0, i, 1, 'white')
+
+      def draw_point(x, y)
+        @img[x + @center_x, @center_y - y] = ChunkyPNG::Color.rgb(0,0,0)
       end
-    end
 
-    def reset_step(x, st, &f)
-      y1 = f.call(x)
-      y2 = f.call(x + st)
-
-      if (y1 - y2).abs > 1.0
-        [st / (y1 - y2).abs, 0.001].max
-      else
-        st
-      end
-    end
-
-    def draw_point(x, y, mul, col)
-      Line.new(
-          x1: @CENTER_X + x * mul, y1: @CENTER_Y - y * mul,
-          x2: @CENTER_X + 1 + x * mul, y2: @CENTER_Y + 2 - y * mul,
-          width: 1,
-          color: col,
-          z: 20
-      )
-    end
-
-    def draw_fn(a, b, &func)
-      step = 0.12
-      c_step = step
-      arg = a
-
-      while arg < b do
-        c_step = step
-        begin
-          c_step = reset_step(arg, step) {|xx| fn(xx)}
-        rescue Math::DomainError
-          arg += c_step * 0.1
-        else
-          draw_point(arg, func.call(arg), @MUL, 'lime')
-        ensure
-          arg += c_step
+      def draw_axes
+        (-@center_x...@center_x).each do |i|
+          draw_point(i, 0)
+        end
+        (-(@center_y - 1)...@center_y).each do |i|
+          draw_point(0, i)
         end
       end
-    end
 
-    def show_window
-      show
+      def save(fname)
+        @img.save(fname, :interlace => true)
+      end
+
+      def fn(x)
+        #Math::asin(Math::sqrt(x))
+        Math::cos(x)
+        #x**2
+        #14/x
+      end
+
+      def reset_step(x, st, &f)
+        y1 = f.call(x)
+        y2 = f.call(x + st)
+
+        if (y1 - y2).abs > 1.0
+          [st / (y1 - y2).abs, 0.001].max
+        else
+          st
+        end
+      end
+
+      def draw_fn(a, b, &func)
+        step = 0.12
+        c_step = step
+        arg = a
+
+        while arg < b do
+          c_step = step
+          begin
+            c_step = reset_step(arg, step) {|xx| fn(xx)}
+          rescue Math::DomainError
+            arg += c_step * 0.1
+          else
+            draw_point(arg * @mul, func.call(arg) * @mul)
+          ensure
+            arg += c_step
+          end
+        end
+      end
+
     end
   end
 end
